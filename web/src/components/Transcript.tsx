@@ -193,7 +193,9 @@ function NoticeLine({ notice }: { notice: Notice }) {
   return (
     <div className={`notice notice--${notice.level}`} role={notice.level === "error" ? "alert" : "status"}>
       <Badge tone={tone} />
-      <span>{notice.message}</span>
+      <div className="notice__body">
+        <Markdown text={notice.message} />
+      </div>
     </div>
   );
 }

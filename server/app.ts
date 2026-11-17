@@ -7,6 +7,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { ClientMsg, ServerMsg } from "../shared/protocol.js";
+import { completeArgs } from "./commands.js";
 import { config } from "./config.js";
 import type { Client, LiveThread } from "./live-thread.js";
 import { ThreadManager } from "./threads.js";
@@ -111,6 +112,14 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
           case "ui_response":
             thread.answer(msg.response);
             return;
+          case "ui_action":
+            thread.act(msg.id, msg.action);
+            return;
+          case "complete": {
+            const items = await completeArgs(thread.session, msg.text);
+            client.send({ type: "completions", threadId: msg.threadId, reqId: msg.reqId, items });
+            return;
+          }
           case "set_model": {
             const model = manager.models.getModel(msg.provider, msg.modelId);
             if (!model) return fail(`Model not found: ${msg.provider}/${msg.modelId}`, msg.threadId);

@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import type {
+  CommandInfo,
   ContentBlock,
   ModelRef,
   Notice,
+  PickItem,
   PiEvent,
   PiMessage,
   ServerMsg,
@@ -30,6 +32,7 @@ export interface ThreadView {
   notices: Notice[];
   statuses: Record<string, string>;
   widgets: Record<string, Widget>;
+  commands: CommandInfo[];
   /** Text an extension put into the editor; seq changes on every set so the composer can react. */
   editorText?: { text: string; seq: number };
 }
@@ -74,6 +77,7 @@ function viewFromSnapshot(s: Snapshot): ThreadView {
     notices: s.notices,
     statuses: s.statuses,
     widgets: s.widgets,
+    commands: s.commands ?? [],
     editorText: s.editorText ? { text: s.editorText, seq: ++seq } : undefined,
   };
 }
@@ -212,10 +216,20 @@ export function handleServerMessage(msg: ServerMsg): void {
       updateView(msg.threadId, (v) => ({ ...v, state: msg.state }));
       return;
     case "ui_request":
+      // Live panels (settings, terminal) re-send their request; replace it where it is.
       updateView(msg.threadId, (v) => ({
         ...v,
-        pendingUi: [...v.pendingUi.filter((r) => r.id !== msg.request.id), msg.request],
+        pendingUi: v.pendingUi.some((r) => r.id === msg.request.id)
+          ? v.pendingUi.map((r) => (r.id === msg.request.id ? msg.request : r))
+          : [...v.pendingUi, msg.request],
       }));
+      return;
+    case "commands":
+      updateView(msg.threadId, (v) => ({ ...v, commands: msg.commands }));
+      return;
+    case "completions":
+      completionWaiters.get(msg.reqId)?.(msg.items);
+      completionWaiters.delete(msg.reqId);
       return;
     case "ui_dismiss":
       updateView(msg.threadId, (v) => ({ ...v, pendingUi: v.pendingUi.filter((r) => r.id !== msg.id) }));
@@ -249,6 +263,21 @@ export function handleServerMessage(msg: ServerMsg): void {
       pushError(msg.message, msg.threadId);
       return;
   }
+}
+
+const completionWaiters = new Map<number, (items: PickItem[]) => void>();
+let completionSeq = 0;
+
+/** Registers a waiter for argument completions; the caller sends the "complete" request. */
+export function awaitCompletions(): { reqId: number; result: Promise<PickItem[]> } {
+  const reqId = ++completionSeq;
+  const result = new Promise<PickItem[]>((resolve) => {
+    completionWaiters.set(reqId, resolve);
+    setTimeout(() => {
+      if (completionWaiters.delete(reqId)) resolve([]);
+    }, 5000);
+  });
+  return { reqId, result };
 }
 
 export function pushError(message: string, threadId?: string): void {

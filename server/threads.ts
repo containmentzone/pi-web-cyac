@@ -2,12 +2,19 @@ import { existsSync, statSync } from "node:fs";
 import {
   type AgentSession,
   createAgentSession,
+  createCodemodeExtension,
+  createMcpExtension,
+  createToolSearchExtension,
+  DefaultResourceLoader,
+  getAgentDir,
+  SettingsManager,
   type ExtensionCommandContextActions,
   ModelRuntime,
   SessionManager,
   type SessionInfo,
 } from "@earendil-works/pi-coding-agent";
 import type { ModelRef, ServerMsg, ThreadSummary } from "../shared/protocol.js";
+import { runBuiltin } from "./builtins.js";
 import { config } from "./config.js";
 import { type Client, LiveThread, type ThreadOwner, toModelRef } from "./live-thread.js";
 import { Sidecar } from "./sidecar.js";
@@ -176,18 +183,54 @@ export class ThreadManager implements ThreadOwner {
   }
 
   private async adopt(sessionManager: SessionManager, setup?: (session: AgentSession) => Promise<void>): Promise<LiveThread> {
+    const cwd = sessionManager.getCwd();
+    const agentDir = getAgentDir();
+    const settingsManager = SettingsManager.create(cwd, agentDir);
+    // SDK sessions skip pi's built-in extensions; load the same ones the pi CLI does. MCP sign-in
+    // links go to the thread as a notice, since the server's own browser may be on another machine.
+    let thread: LiveThread | undefined;
+    const resourceLoader = new DefaultResourceLoader({
+      cwd,
+      agentDir,
+      settingsManager,
+      extensionFactories: [
+        { name: "codemode", factory: createCodemodeExtension(), replaceable: true, builtin: true },
+        { name: "tool-search", factory: createToolSearchExtension(), replaceable: true, builtin: true },
+        {
+          name: "mcp",
+          factory: createMcpExtension({
+            openUrl: (url) => thread?.notify(`MCP sign-in: [open the authorization page](${url})`, "info"),
+          }),
+          replaceable: true,
+          builtin: true,
+        },
+      ] as never,
+    });
+    await resourceLoader.reload();
     const { session, modelFallbackMessage } = await createAgentSession({
-      cwd: sessionManager.getCwd(),
+      cwd,
       sessionManager,
+      settingsManager,
+      resourceLoader,
       modelRuntime: this.models,
     });
-    const thread = new LiveThread(session, this);
+    thread = new LiveThread(session, this);
     this.live.set(thread.id, thread);
     await thread.start();
     if (setup) await setup(session);
     if (modelFallbackMessage) thread.notify(modelFallbackMessage, "warning");
     this.threadsChanged();
     return thread;
+  }
+
+  runBuiltin(thread: LiveThread, text: string): Promise<boolean> {
+    return runBuiltin(this, thread, text);
+  }
+
+  /** /new: a fresh thread in the same directory, focused in every browser. */
+  async newThread(from: LiveThread): Promise<void> {
+    const next = await this.create(from.session.sessionManager.getCwd());
+    this.focus(next);
   }
 
   /** Focus a thread in every browser (used when an extension command opens a new session). */

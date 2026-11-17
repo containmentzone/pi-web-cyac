@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionUIContext, ExtensionUIDialogOptions } from "@earendil-works/pi-coding-agent";
-import type { UIRequest, UIResponse, Widget } from "../shared/protocol.js";
+import type { UIAction, UIRequest, UIResponse, Widget } from "../shared/protocol.js";
+import { runCustom } from "./tui-bridge.js";
 
 /** What the UI context needs from its thread. Implemented by LiveThread. */
 export interface UIHost {
-  openDialog(request: UIRequest, finish: (response?: UIResponse) => void): void;
+  openDialog(request: UIRequest, finish: (response?: UIResponse) => void, onAction?: (action: UIAction) => void): void;
+  updateDialog(request: UIRequest): void;
   closeDialog(id: string): void;
   notify(message: string, level: "info" | "warning" | "error"): void;
   setStatus(key: string, text: string | undefined): void;
@@ -113,9 +115,8 @@ export function createWebUIContext(host: UIHost): ExtensionUIContext {
     setHiddenThinkingLabel() {},
     setFooter() {},
     setHeader() {},
-    async custom() {
-      return undefined;
-    },
+    // Runs the extension's TUI component on the server and mirrors it into a terminal panel.
+    custom: (factory: any, options?: any) => runCustom(host, factory, options),
     addAutocompleteProvider() {},
     setEditorComponent() {},
     getEditorComponent: () => undefined,

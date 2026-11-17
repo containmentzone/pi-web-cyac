@@ -14,10 +14,12 @@ import type {
   ThreadState,
   ThreadSummary,
   ToolRun,
+  UIAction,
   UIRequest,
   UIResponse,
   Widget,
 } from "../shared/protocol.js";
+import { listCommands } from "./commands.js";
 import { createWebUIContext, type UIHost } from "./ui-context.js";
 
 export interface Client {
@@ -27,6 +29,8 @@ export interface Client {
 /** Callbacks from a thread to the manager that owns it. */
 export interface ThreadOwner {
   threadsChanged(): void;
+  /** Runs web-handled slash commands (/model, /login, /settings, ...). True when it handled the text. */
+  runBuiltin(thread: LiveThread, text: string): Promise<boolean>;
   summaryFor(thread: LiveThread): ThreadSummary;
   commandActions(thread: LiveThread): ExtensionCommandContextActions;
 }
@@ -73,7 +77,10 @@ export class LiveThread implements UIHost {
 
   private partial: PiMessage | null = null;
   private readonly tools = new Map<string, ToolRun>();
-  private readonly dialogs = new Map<string, { request: UIRequest; finish: (r?: UIResponse) => void }>();
+  private readonly dialogs = new Map<
+    string,
+    { request: UIRequest; finish: (r?: UIResponse) => void; onAction?: (action: UIAction) => void }
+  >();
   private notices: Notice[] = [];
   private readonly statuses = new Map<string, string>();
   private readonly widgets = new Map<string, Widget>();
@@ -146,6 +153,7 @@ export class LiveThread implements UIHost {
       statuses: Object.fromEntries(this.statuses),
       widgets: Object.fromEntries(this.widgets),
       editorText: this.editorText || undefined,
+      commands: listCommands(this.session),
     };
   }
 
@@ -184,6 +192,12 @@ export class LiveThread implements UIHost {
   async prompt(text: string, behavior?: "steer" | "followUp"): Promise<void> {
     this.lastActivity = Date.now();
     this.editorText = "";
+    try {
+      if (await this.owner.runBuiltin(this, text)) return;
+    } catch (err) {
+      this.notify(err instanceof Error ? err.message : String(err), "error");
+      return;
+    }
     if (this.session.isStreaming) {
       await this.session.prompt(text, { streamingBehavior: behavior ?? "steer", source: "rpc" });
       return;
@@ -207,16 +221,52 @@ export class LiveThread implements UIHost {
     this.dialogs.get(response.id)?.finish(response);
   }
 
+  act(id: string, action: UIAction): void {
+    this.dialogs.get(id)?.onAction?.(action);
+  }
+
+  pushCommands(): void {
+    this.broadcast({ type: "commands", threadId: this.id, commands: listCommands(this.session) });
+  }
+
   pushState(): void {
     this.broadcast({ type: "state", threadId: this.id, state: this.state() });
   }
 
   // ---------- UIHost (ctx.ui) ----------
 
-  openDialog(request: UIRequest, finish: (response?: UIResponse) => void): void {
-    this.dialogs.set(request.id, { request, finish });
+  openDialog(request: UIRequest, finish: (response?: UIResponse) => void, onAction?: (action: UIAction) => void): void {
+    this.dialogs.set(request.id, { request, finish, onAction });
     this.broadcast({ type: "ui_request", threadId: this.id, request });
     this.owner.threadsChanged();
+  }
+
+  /** Replace an open dialog's content (live panels: settings, terminal). */
+  updateDialog(request: UIRequest): void {
+    const entry = this.dialogs.get(request.id);
+    if (!entry) return;
+    entry.request = request;
+    this.broadcast({ type: "ui_request", threadId: this.id, request });
+  }
+
+  /**
+   * Ask through a dialog card and wait for the answer. Used by the built-in commands; resolves
+   * undefined when cancelled.
+   */
+  ask(request: UIRequest, onAction?: (action: UIAction) => void): Promise<UIResponse | undefined> {
+    return new Promise((resolve) => {
+      let done = false;
+      this.openDialog(
+        request,
+        (response) => {
+          if (done) return;
+          done = true;
+          this.closeDialog(request.id);
+          resolve(response);
+        },
+        onAction,
+      );
+    });
   }
 
   closeDialog(id: string): void {
@@ -312,6 +362,9 @@ export class LiveThread implements UIHost {
       }
       case "tool_execution_end":
         this.tools.delete(e.toolCallId);
+        break;
+      case "session_start":
+        this.pushCommands();
         break;
       case "session_info_changed":
         this.pushState();

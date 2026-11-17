@@ -77,16 +77,60 @@ export interface ThreadSummary {
   archived: boolean;
 }
 
+export interface PickItem {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface SettingItem {
+  id: string;
+  label: string;
+  description?: string;
+  value: string;
+  options: string[];
+}
+
 export type UIRequest =
-  | { id: string; method: "select"; title: string; options: string[]; timeout?: number }
+  | {
+      id: string;
+      method: "select";
+      title: string;
+      /** Plain options (ctx.ui.select); the answer is the option text. */
+      options: string[];
+      /** Richer options for built-in pickers; the answer is the item value. Overrides options. */
+      items?: PickItem[];
+      message?: string;
+      /** Show a filter box (long lists such as models and providers). */
+      search?: boolean;
+      selected?: string;
+      timeout?: number;
+    }
   | { id: string; method: "confirm"; title: string; message: string; timeout?: number }
-  | { id: string; method: "input"; title: string; placeholder?: string; timeout?: number }
-  | { id: string; method: "editor"; title: string; prefill?: string };
+  | { id: string; method: "input"; title: string; placeholder?: string; message?: string; secret?: boolean; timeout?: number }
+  | { id: string; method: "editor"; title: string; prefill?: string }
+  /** pi's /settings, as a live panel: each change is applied right away. */
+  | { id: string; method: "settings"; title: string; items: SettingItem[]; message?: string }
+  /**
+   * A pi TUI component (ctx.ui.custom, the /mcp manager) rendered on the server. lines are ANSI
+   * text; keys typed in the panel go back as terminal input.
+   */
+  | { id: string; method: "terminal"; title: string; lines: string[] };
 
 export type UIResponse =
   | { id: string; value: string }
   | { id: string; confirmed: boolean }
   | { id: string; cancelled: true };
+
+/** Input for a dialog that stays open: a setting change, or keys for a terminal panel. */
+export type UIAction = { setting: string; value: string } | { keys: string };
+
+export interface CommandInfo {
+  name: string;
+  description?: string;
+  argumentHint?: string;
+  source: "builtin" | "extension" | "prompt" | "skill";
+}
 
 export interface Notice {
   id: string;
@@ -141,6 +185,7 @@ export interface Snapshot {
   statuses: Record<string, string>;
   widgets: Record<string, Widget>;
   editorText?: string;
+  commands: CommandInfo[];
 }
 
 // ---------- client -> server ----------
@@ -153,6 +198,8 @@ export type ClientMsg =
   | { type: "set_model"; threadId: string; provider: string; modelId: string }
   | { type: "set_thinking"; threadId: string; level: string }
   | { type: "ui_response"; threadId: string; response: UIResponse }
+  | { type: "ui_action"; threadId: string; id: string; action: UIAction }
+  | { type: "complete"; threadId: string; text: string; reqId: number }
   | { type: "rename"; threadId: string; name: string }
   | { type: "archive"; threadId: string; archived: boolean }
   | { type: "create_thread"; cwd?: string; reqId?: string };
@@ -167,6 +214,8 @@ export type ServerMsg =
   | { type: "state"; threadId: string; state: ThreadState }
   | { type: "ui_request"; threadId: string; request: UIRequest }
   | { type: "ui_dismiss"; threadId: string; id: string }
+  | { type: "commands"; threadId: string; commands: CommandInfo[] }
+  | { type: "completions"; threadId: string; reqId: number; items: PickItem[] }
   | { type: "notice"; threadId: string; notice: Notice }
   | { type: "status"; threadId: string; key: string; text?: string }
   | { type: "widget"; threadId: string; key: string; widget?: Widget }
