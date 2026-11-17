@@ -1,0 +1,50 @@
+name: Package
+
+# Typechecks and builds on every push and PR. On the repository's default branch, publishes the
+# pi package to GitHub Packages (npm.pkg.github.com) when package.json has a version that is not
+# published yet, so bumping "version" is what releases it.
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: "@containmentzone"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm pack --dry-run --ignore-scripts
+
+      - name: Check whether this version is already published
+        id: version
+        if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "$name@$version is already published; bump the version to release."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to GitHub Packages
+        if: steps.version.outputs.publish == 'true'
+        run: npm publish --ignore-scripts

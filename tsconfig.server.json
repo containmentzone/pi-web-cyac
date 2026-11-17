@@ -12,7 +12,7 @@
     "types": ["node"],
     "rootDir": ".",
     "outDir": "dist/server",
-    "sourceMap": true
+    "sourceMap": false
   },
   "include": ["server/**/*.ts", "shared/**/*.ts"]
 }

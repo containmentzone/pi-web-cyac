@@ -1,28 +1,57 @@
 {
-  "name": "pi-web-cyac",
+  "name": "@containmentzone/pi-web-cyac",
   "version": "0.1.0",
-  "private": true,
-  "description": "A small web UI for the pi coding agent, styled with CyAc",
+  "description": "pi package: a web UI for the pi coding agent (/web), styled with CyAc",
   "type": "module",
   "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "web",
+    "ui"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/containmentzone/pi-web-cyac.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "engines": {
     "node": ">=22.19.0"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/server/server/extension.js"
+    ]
+  },
+  "bin": {
+    "pi-web": "dist/server/server/cli.js"
+  },
   "scripts": {
     "dev": "node --run dev:server & vite",
-    "dev:server": "tsx watch server/index.ts",
-    "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist/server/server/index.js",
+    "dev:server": "tsx watch server/cli.ts",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build && tsc -p tsconfig.server.json",
+    "start": "node dist/server/server/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "gen:tokens": "node scripts/gen-tokens.mjs"
+    "gen:tokens": "node scripts/gen-tokens.mjs",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "1.5.2",
     "@hono/node-server": "2.1.9",
     "hono": "4.13.19",
     "ws": "8.23.0"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2",
     "@types/node": "22.19.0",
     "@types/react": "18.3.23",
     "@types/react-dom": "18.3.7",
