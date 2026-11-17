@@ -4,6 +4,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 // Static import on purpose: pi resolves @earendil-works/pi-coding-agent to the host install only
 // for modules loaded through its extension loader, which a dynamic import() would bypass.
 import { startServer, type WebServer } from "./app.js";
+import { setHostTheme } from "./tui-bridge.js";
 
 // pi loads extensions once per session (web threads are sessions too), so the running
 // server is kept on globalThis rather than in module state.
@@ -30,9 +31,14 @@ async function start(target: { host?: string; port?: number }): Promise<WebServe
 }
 
 export default function piWeb(pi: ExtensionAPI) {
+  // Terminal panels (/mcp and other ctx.ui.custom UIs) render with the host pi's real theme.
+  pi.on("session_start", (_event, ctx) => {
+    if (ctx.mode === "tui") setHostTheme(ctx.ui.theme);
+  });
   pi.registerCommand("web", {
     description: "Start the CyAc web UI for pi (/web [host:port], /web stop)",
     handler: async (args, ctx) => {
+      if (ctx.mode === "tui") setHostTheme(ctx.ui.theme);
       const arg = (args ?? "").trim();
       if (arg === "stop") {
         const running = holder[KEY];

@@ -4,6 +4,7 @@ import { Button, Composer, Loader, Menu, Metric, Panel, StatusBar } from "../cya
 import { send } from "../socket";
 import { type ThreadView as View, useStore } from "../store";
 import { tildify, tokens } from "./format";
+import { usePalette } from "./Palette";
 import { Transcript } from "./Transcript";
 
 function Widgets({ widgets, placement }: { widgets: Record<string, Widget>; placement: Widget["placement"] }) {
@@ -108,6 +109,13 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const [draft, setDraft] = useState("");
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute("data-theme") ?? "void");
   const scrollRef = useStickToBottom(view);
+  const busyNow = !!view?.state.busy;
+  const submit = (text: string) => {
+    if (!text.trim()) return;
+    send({ type: "prompt", threadId, text, behavior: busyNow ? "steer" : undefined });
+    setDraft("");
+  };
+  const palette = usePalette({ threadId, draft, setDraft, commands: view?.commands ?? [], submit });
 
   // Drafts are per thread; extensions can also set the editor text (ctx.ui.setEditorText).
   useEffect(() => setDraft(""), [threadId]);
@@ -129,12 +137,6 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const busy = state.busy;
   const model = state.model;
   const queued = state.queue.steering.length + state.queue.followUp.length;
-
-  const submit = (text: string) => {
-    if (!text.trim()) return;
-    send({ type: "prompt", threadId, text, behavior: busy ? "steer" : undefined });
-    setDraft("");
-  };
 
   const toggleTheme = () => {
     const next = theme === "paper" ? "void" : "paper";
@@ -206,7 +208,7 @@ export function ThreadView({ threadId }: { threadId: string }) {
           pendingUi={view.pendingUi}
           busy={busy}
         />
-        {view.messages.length === 0 && !busy && (
+        {view.messages.length === 0 && !busy && view.notices.length === 0 && view.pendingUi.length === 0 && (
           <div className="empty">
             <span className="empty__caption">[READY]</span>
             <span className="empty__sub">{thread ? tildify(thread.cwd) : ""}</span>
@@ -215,6 +217,8 @@ export function ThreadView({ threadId }: { threadId: string }) {
       </div>
       <div className="thread__bottom">
         <Widgets widgets={view.widgets} placement="aboveEditor" />
+        <div className="composer-wrap" onKeyDownCapture={palette.onKeyDownCapture}>
+          {palette.element}
         <Composer
           value={draft}
           onChange={setDraft}
@@ -222,7 +226,7 @@ export function ThreadView({ threadId }: { threadId: string }) {
           busy={showStop}
           onStop={() => send({ type: "abort", threadId })}
           submitLabel={busy ? "Steer" : "Send"}
-          placeholder={busy ? "Steer the running agent, or Stop" : "Message pi. /commands work too."}
+          placeholder={busy ? "Steer the running agent, or Stop" : "Message pi. Type / for commands."}
           tools={
             <>
               {modelItems.length > 0 && (
@@ -247,6 +251,7 @@ export function ThreadView({ threadId }: { threadId: string }) {
             </>
           }
         />
+        </div>
         <Widgets widgets={view.widgets} placement="belowEditor" />
         <StatusBar left={left} right={right} label="Session status" />
       </div>

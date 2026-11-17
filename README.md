@@ -5,7 +5,8 @@ A pi package that adds a web UI to the [pi coding agent](https://github.com/eare
 - **Runs inside pi.** The `/web` command starts an HTTP + WebSocket server in your pi process. It uses your installed pi (the package declares pi as a peer dependency) and your existing `~/.pi/agent` config, providers and extensions.
 - **Threads are pi sessions.** There is no database. Threads are pi's own JSONL session files under `~/.pi/agent/sessions`, so a web thread can be resumed with `pi --resume`, and CLI sessions show up in the web list. Each open thread is its own live `AgentSession`; runs keep going when the tab closes.
 - **One WebSocket per tab.** The server forwards pi's session events (deltas only, like pi's RPC mode). On subscribe it sends a snapshot first, so reloads, reconnects and a second tab all pick up mid-stream.
-- **Extension UI works.** `ctx.ui.select/confirm/input/editor` show up as cards in the thread. Pending dialogs are held on the server, so they survive a reload, appear in every open tab, and the first answer wins. `notify`, `setStatus`, `setWidget`, `setTitle` and `setEditorText` map to notices, status-bar readings, panels above the composer, the thread header and the composer. TUI-only calls (`custom()`, footers, headers, themes) behave as they do in pi's RPC mode.
+- **Extension UI works.** `ctx.ui.select/confirm/input/editor` show up as cards in the thread. Pending dialogs are held on the server, so they survive a reload, appear in every open tab, and the first answer wins. `notify`, `setStatus`, `setWidget`, `setTitle` and `setEditorText` map to notices, status-bar readings, panels above the composer, the thread header and the composer. `ctx.ui.custom()` components run on the server and are mirrored into a terminal panel in the thread, with keys sent back; footers, headers and themes behave as they do in pi's RPC mode.
+- **Slash commands like pi's.** Typing `/` lists every command (built-ins, prompt templates, extension commands, skills) with its help text; after `/name ` it offers pi's argument completions (models, thinking levels, providers, extension completions). `/model`, `/thinking`, `/login`, `/logout`, `/settings`, `/new`, `/name`, `/session`, `/compact` and `/reload` open the same pickers as pi's TUI as cards, and `/mcp` opens pi's MCP manager. Web threads load pi's built-in MCP, codemode and tool-search extensions, as the pi CLI does.
 
 There is no authentication. Bind it to loopback or to a Tailscale address, not to a public interface.
 
@@ -36,6 +37,8 @@ Inside pi:
 ```
 
 The command prints the URL. The server lives as long as that pi process. To start it without typing the command, set `PI_WEB_AUTOSTART=1` (for example `PI_WEB_AUTOSTART=1 PI_WEB_HOST=100.x.y.z pi` in a tmux pane on the box).
+
+Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter runs, Esc closes. `/login` sign-in links and device codes appear as notices in the thread. OAuth flows that redirect to `localhost` reach the machine running pi, so when the browser is elsewhere, paste the code or redirect URL into the card when pi asks for it.
 
 ### Settings
 
@@ -79,7 +82,8 @@ web/src/cyac/  Vendored CyAc bundle, CSS, types and tokens (tokens.css is genera
 
 - A thread should be driven from one place at a time. If you open the session your pi terminal is using in the web UI too, both append to the same file.
 - Extension commands that open a new session (`newSession`, `fork`, `switchSession`) open it as a new thread and focus it, instead of replacing the current one. `session_before_switch`/`session_before_fork` hooks are not run for these.
-- No branching UI, image upload, file browser or provider login in the browser yet.
+- No branching UI, image upload or file browser yet.
+- `/settings` shows the settings that matter outside a terminal; display options for pi's TUI are left out.
 
 ## Fonts
 
