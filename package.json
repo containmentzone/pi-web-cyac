@@ -1,6 +1,6 @@
 {
   "name": "@containmentzone/pi-web-cyac",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "pi package: a web UI for the pi coding agent (/web), styled with CyAc",
   "type": "module",
   "license": "MIT",
