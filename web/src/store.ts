@@ -41,6 +41,8 @@ export interface AppState {
   connected: boolean;
   everConnected: boolean;
   defaultCwd: string;
+  /** Server's home directory, for showing paths as ~/… . */
+  home: string;
   models: ModelRef[];
   version: string;
   threads: ThreadSummary[];
@@ -54,6 +56,7 @@ export const useStore = create<AppState>(() => ({
   connected: false,
   everConnected: false,
   defaultCwd: "",
+  home: "",
   models: [],
   version: "",
   threads: [],
@@ -201,7 +204,7 @@ function applyEvent(v: ThreadView, e: PiEvent & Record<string, any>): ThreadView
 export function handleServerMessage(msg: ServerMsg): void {
   switch (msg.type) {
     case "hello":
-      useStore.setState({ defaultCwd: msg.defaultCwd, models: msg.models, version: msg.version });
+      useStore.setState({ defaultCwd: msg.defaultCwd, home: msg.home, models: msg.models, version: msg.version });
       return;
     case "threads":
       useStore.setState({ threads: msg.threads, threadsLoaded: true });

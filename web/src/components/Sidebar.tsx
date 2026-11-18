@@ -3,7 +3,7 @@ import type { ThreadSummary } from "../../../shared/protocol";
 import { Badge, Button, Field } from "../cyac";
 import { send } from "../socket";
 import { useStore } from "../store";
-import { ago, basename, pad } from "./format";
+import { ago, basename, pad, tildify } from "./format";
 
 function ThreadRow({ t, index, active }: { t: ThreadSummary; index: number; active: boolean }) {
   return (
@@ -44,6 +44,7 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
   const loaded = useStore((s) => s.threadsLoaded);
   const current = useStore((s) => s.current);
   const defaultCwd = useStore((s) => s.defaultCwd);
+  const home = useStore((s) => s.home);
   const [creating, setCreating] = useState(false);
   const [cwd, setCwd] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -97,12 +98,12 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
             <Field
               label="Working dir"
               code="CWD"
-              placeholder={defaultCwd}
+              placeholder={tildify(defaultCwd, home) || defaultCwd}
               value={cwd}
               autoFocus
               onChange={(e) => setCwd(e.target.value)}
               onKeyDown={(e) => e.key === "Escape" && setCreating(false)}
-              hint="Absolute path on the server. Empty uses the default."
+              hint="Absolute path on the server. ~ or ~/… resolves to the home directory. Empty uses the default."
             />
             <div className="sidebar__new-actions">
               <Button type="submit" size="s">

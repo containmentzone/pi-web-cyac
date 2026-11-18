@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
 import { VERSION } from "@earendil-works/pi-coding-agent";
@@ -146,7 +147,7 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
       subscriptions.clear();
     });
 
-    client.send({ type: "hello", defaultCwd: config.defaultCwd, models: await manager.availableModels(), version: VERSION });
+    client.send({ type: "hello", defaultCwd: config.defaultCwd, home: homedir(), models: await manager.availableModels(), version: VERSION });
     client.send({ type: "threads", threads: await manager.list() });
   });
 

@@ -25,6 +25,7 @@ function Header({ thread, view }: { thread?: ThreadSummary; view: View }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState("");
   const threadId = useStore((s) => s.current)!;
+  const home = useStore((s) => s.home);
   const title = view.state.extTitle || view.state.title || thread?.title || "Thread";
   const archived = !!thread?.archived;
 
@@ -57,7 +58,7 @@ function Header({ thread, view }: { thread?: ThreadSummary; view: View }) {
         </h1>
       )}
       <span className="thread-head__cwd" title={thread?.cwd}>
-        {thread ? tildify(thread.cwd) : ""}
+        {thread ? tildify(thread.cwd, home) : ""}
       </span>
       <span className="thread-head__actions">
         <Menu
@@ -106,6 +107,7 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const view = useStore((s) => s.views[threadId]);
   const thread = useStore((s) => s.threads.find((t) => t.id === threadId));
   const models = useStore((s) => s.models);
+  const home = useStore((s) => s.home);
   const [draft, setDraft] = useState("");
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute("data-theme") ?? "void");
   const scrollRef = useStickToBottom(view);
@@ -211,7 +213,7 @@ export function ThreadView({ threadId }: { threadId: string }) {
         {view.messages.length === 0 && !busy && view.notices.length === 0 && view.pendingUi.length === 0 && (
           <div className="empty">
             <span className="empty__caption">[READY]</span>
-            <span className="empty__sub">{thread ? tildify(thread.cwd) : ""}</span>
+            <span className="empty__sub">{thread ? tildify(thread.cwd, home) : ""}</span>
           </div>
         )}
       </div>

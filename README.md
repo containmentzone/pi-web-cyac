@@ -49,7 +49,7 @@ Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter run
 | `PI_WEB_HOST` | `127.0.0.1` | Bind address |
 | `PI_WEB_PORT` | `8787` | |
 | `PI_WEB_AUTOSTART` | off | Start the server when pi loads the extension |
-| `PI_WEB_CWD` | pi's working directory | Default working directory for new threads |
+| `PI_WEB_CWD` | pi's working directory | Default working directory for new threads (`~`/`~/…` resolve) |
 | `PI_WEB_SESSION_DIR` | pi's default | Keep web threads in their own session folder |
 | `PI_WEB_STATE_FILE` | `~/.pi/agent/pi-web/threads.json` | UI-only state (archived flags) |
 | `PI_WEB_IDLE_MINUTES` | `30` | Idle, unwatched sessions are unloaded and reopen from disk on demand |

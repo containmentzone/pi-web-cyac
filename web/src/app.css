@@ -178,6 +178,10 @@ body {
 .thread__bottom > .cy-composer, .thread__bottom > .widgets { width: 100%; max-width: 720px; margin: 0 auto; }
 .thread__bottom > .cy-status { margin: 0 calc(-1 * var(--space-6)); }
 
+/* Menus in the composer/status area open upward; cap long lists (the model picker) so they
+   scroll instead of overflowing past the top of the page. Matches the palette's cap. */
+.thread__bottom .cy-menu__list { max-height: min(360px, 50vh); overflow-y: auto; }
+
 .empty, .splash {
   display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
   padding: var(--space-12) var(--space-6);
