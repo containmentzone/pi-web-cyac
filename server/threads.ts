@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   type AgentSession,
   createAgentSession,
@@ -15,7 +16,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { ModelRef, ServerMsg, ThreadSummary } from "../shared/protocol.js";
 import { runBuiltin } from "./builtins.js";
-import { config } from "./config.js";
+import { config, expandTilde } from "./config.js";
 import { type Client, LiveThread, type ThreadOwner, toModelRef } from "./live-thread.js";
 import { Sidecar } from "./sidecar.js";
 
@@ -170,8 +171,10 @@ export class ThreadManager implements ThreadOwner {
   }
 
   async create(cwd: string = config.defaultCwd): Promise<LiveThread> {
-    assertDir(cwd);
-    return this.adopt(SessionManager.create(cwd, config.sessionDir));
+    // "~"/"~/…" from the new-thread form (or the API) resolve to the home directory.
+    const dir = resolve(expandTilde(cwd));
+    assertDir(dir);
+    return this.adopt(SessionManager.create(dir, config.sessionDir));
   }
 
   async openPath(path: string): Promise<LiveThread> {

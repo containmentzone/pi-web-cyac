@@ -207,7 +207,7 @@ export type ClientMsg =
 // ---------- server -> client ----------
 
 export type ServerMsg =
-  | { type: "hello"; defaultCwd: string; models: ModelRef[]; version: string }
+  | { type: "hello"; defaultCwd: string; home: string; models: ModelRef[]; version: string }
   | { type: "threads"; threads: ThreadSummary[] }
   | { type: "snapshot"; threadId: string; snapshot: Snapshot }
   | { type: "event"; threadId: string; event: PiEvent }
