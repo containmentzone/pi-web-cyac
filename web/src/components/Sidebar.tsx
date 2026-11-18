@@ -61,12 +61,33 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
   return (
     <nav className="sidebar" aria-label="Threads">
       <header className="sidebar__head">
-        <span className="wordmark">CyAc</span>
-        <span className="sidebar__code">PI / AGENT</span>
+        <span className="sidebar__brand">
+          <span className="wordmark" aria-label="CyberAcme">
+            <span aria-hidden="true">
+              Cy<span className="wordmark__ber">ber</span>
+              <span className="wordmark__ac">
+                Ac<span className="wordmark__me">me</span>
+              </span>
+            </span>
+          </span>
+        </span>
+        <button
+          type="button"
+          className={`plus-btn${creating ? " plus-btn--open" : ""}`}
+          onClick={() => setCreating((v) => !v)}
+          aria-expanded={creating}
+          aria-controls="sidebar-new"
+          aria-label={creating ? "Cancel new thread" : "New thread"}
+          title={creating ? "Cancel" : "New thread"}
+        >
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <path d="M6.5 0h3v6.5H16v3H9.5V16h-3V9.5H0v-3h6.5z" />
+          </svg>
+        </button>
       </header>
 
-      <div className="sidebar__new">
-        {creating ? (
+      {creating && (
+        <div className="sidebar__new" id="sidebar-new">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -92,12 +113,8 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
               </Button>
             </div>
           </form>
-        ) : (
-          <Button size="s" code="+" onClick={() => setCreating(true)}>
-            New thread
-          </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="sidebar__label">
         <span>{showArchived ? "Archived" : "Threads"}</span>
@@ -109,7 +126,7 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
           <ThreadRow key={t.id} t={t} index={i} active={t.id === current} />
         ))}
         {loaded && visible.length === 0 && (
-          <li className="thread-list__empty">{showArchived ? "No archived threads." : "No threads yet. Start one above."}</li>
+          <li className="thread-list__empty">{showArchived ? "No archived threads." : "No threads yet. Press + to start one."}</li>
         )}
       </ul>
 
