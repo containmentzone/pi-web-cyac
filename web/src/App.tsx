@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge, Button, Loader } from "./cyac";
 import { Sidebar } from "./components/Sidebar";
 import { ThreadView } from "./components/ThreadView";
+import { Logo } from "./components/Logo";
 import { useStore } from "./store";
 
 function Errors() {
@@ -20,15 +21,14 @@ function Errors() {
 }
 
 function Splash() {
-  const threads = useStore((s) => s.threads);
   return (
     <main className="thread thread--empty">
       <div className="splash">
-        <span className="splash__mark">PI</span>
+        <h1 className="splash__lockup">
+          <Logo className="splash__logo" />
+          <span className="splash__mark">CyberAcme</span>
+        </h1>
         <span className="splash__caption">[EVERYTHING RUNS ON CYBERACME]</span>
-        <span className="splash__sub">
-          {threads.length ? "Pick a thread, or start a new one." : "Start a thread to begin."}
-        </span>
       </div>
     </main>
   );
