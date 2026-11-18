@@ -21,7 +21,6 @@ function Errors() {
 }
 
 function Splash() {
-  const threads = useStore((s) => s.threads);
   return (
     <main className="thread thread--empty">
       <div className="splash">
@@ -30,9 +29,6 @@ function Splash() {
           <span className="splash__mark">CyberAcme</span>
         </h1>
         <span className="splash__caption">[EVERYTHING RUNS ON CYBERACME]</span>
-        <span className="splash__sub">
-          {threads.length ? "Pick a thread, or start a new one." : "Start a thread to begin."}
-        </span>
       </div>
     </main>
   );
