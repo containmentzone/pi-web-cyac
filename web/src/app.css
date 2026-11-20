@@ -146,9 +146,8 @@ body {
 }
 .thread-head__title {
   margin: 0;
-  /* Instrument Serif, the CyAc stand-in for IvyPresto Headline. Mixed case, one weight. */
-  font-family: var(--font-serif); font-weight: 400;
-  font-size: 22px; line-height: 28px; letter-spacing: 0;
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: 16px; line-height: 24px; letter-spacing: -0.01em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .thread-head__cwd {
