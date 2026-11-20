@@ -146,8 +146,9 @@ body {
 }
 .thread-head__title {
   margin: 0;
-  font-family: var(--font-display); font-weight: 400;
-  font-size: 13px; line-height: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  /* Instrument Serif, the CyAc stand-in for IvyPresto Headline. Mixed case, one weight. */
+  font-family: var(--font-serif); font-weight: 400;
+  font-size: 22px; line-height: 28px; letter-spacing: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .thread-head__cwd {
@@ -209,12 +210,17 @@ body {
 .md > * { margin: 0; }
 .md ul, .md ol { padding-left: var(--space-6); margin: 0; }
 .md li + li { margin-top: var(--space-1); }
-.md h1, .md h2, .md h3, .md h4 {
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
   margin: var(--space-2) 0 0;
-  font-family: var(--font-display); font-weight: 400; text-transform: uppercase;
-  font-size: 13px; line-height: 16px; letter-spacing: 0.06em;
+  /* Instrument Serif (IvyPresto stand-in); it ships one weight, so no bold. */
+  font-family: var(--font-serif); font-weight: 400; letter-spacing: 0;
+  font-size: 18px; line-height: 24px;
 }
-.md h1 { font-size: 20px; line-height: 24px; letter-spacing: 0.04em; }
+.md h1 { font-size: 30px; line-height: 36px; }
+.md h2 { font-size: 24px; line-height: 30px; }
+.md h3 { font-size: 20px; line-height: 26px; }
+.md h5, .md h6 { font-size: 16px; line-height: 22px; }
+.md h6 { font-style: italic; }
 .md blockquote { margin: 0; padding-left: var(--space-4); border-left: var(--stroke-rule) solid var(--hairline); color: var(--ink-muted); }
 .md hr { border: 0; border-top: var(--stroke-hair) solid var(--hairline); width: 100%; }
 .md-table { overflow-x: auto; }
