@@ -110,6 +110,15 @@ body {
 }
 .sidebar__foot-spacer { flex: 1 1 auto; }
 
+/* ---------- headings ----------
+   KH Interference (ModeNine stand-in) is for display text only. Headings are uppercase
+   Shapiro or Ivy; Ivy's stand-in, Instrument Serif, is what ships, so panel titles
+   (settings, extension dialogs, widgets) use it. One weight only, so no bold. */
+.cy-panel__title {
+  font-family: var(--font-serif); font-weight: 400;
+  font-size: 22px; line-height: 24px; letter-spacing: 0.02em; text-transform: uppercase;
+}
+
 /* ---------- settings modal ---------- */
 
 .settings {
@@ -146,7 +155,7 @@ body {
 .theme-choice__swatch--paper { background: #ecece6; }
 .theme-choice__swatch--paper span { background: #0a0b0c; }
 .theme-choice__text { display: flex; flex-direction: column; gap: 2px; }
-.theme-choice__name { font-family: var(--font-display); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+.theme-choice__name { font-family: var(--font-serif); font-weight: 400; font-size: 18px; line-height: 20px; text-transform: uppercase; letter-spacing: 0.02em; }
 .theme-choice__hint { font-size: 12px; color: var(--ink-muted); }
 
 .thread-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1 1 auto; min-height: 0; }

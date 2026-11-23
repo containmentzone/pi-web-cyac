@@ -52,7 +52,9 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
       className="settings"
       aria-label="Settings"
       onClose={onClose}
-      onClick={(e) => {
+      // Mouse down, not click: a press that starts inside the panel and ends on the
+      // backdrop (e.g. selecting text) must not close the dialog.
+      onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
