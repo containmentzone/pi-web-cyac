@@ -104,7 +104,59 @@ body {
 .sidebar__new form { display: flex; flex-direction: column; gap: var(--space-3); }
 .sidebar__new-actions { display: flex; gap: var(--space-2); }
 .sidebar__label { display: flex; justify-content: space-between; padding: var(--space-3) var(--space-4) var(--space-2); }
-.sidebar__foot { padding: var(--space-2) var(--space-4); border-top: var(--stroke-hair) solid var(--hairline); }
+.sidebar__foot {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-4); border-top: var(--stroke-hair) solid var(--hairline);
+}
+.sidebar__foot-spacer { flex: 1 1 auto; }
+
+/* ---------- headings ----------
+   KH Interference (ModeNine stand-in) is for display text only. Headings are uppercase
+   Shapiro or Ivy; Ivy's stand-in, Instrument Serif, is what ships, so panel titles
+   (settings, extension dialogs, widgets) use it. One weight only, so no bold. */
+.cy-panel__title {
+  font-family: var(--font-serif); font-weight: 400;
+  font-size: 22px; line-height: 24px; letter-spacing: 0.02em; text-transform: uppercase;
+}
+
+/* ---------- settings modal ---------- */
+
+.settings {
+  width: min(440px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px);
+  padding: 0; border: 0; background: none; color: var(--ink);
+  overflow: auto;
+}
+.settings::backdrop { background: color-mix(in srgb, var(--bg) 72%, transparent); }
+.settings__panel { border-color: var(--line-strong); }
+.settings__group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.settings__label {
+  display: flex; justify-content: space-between; width: 100%; padding: 0 0 var(--space-2);
+  font-family: var(--font-mono); font-size: 11px; line-height: 14px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted);
+}
+.settings__actions { display: flex; justify-content: flex-end; margin-top: var(--space-6); }
+
+.theme-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.theme-choice {
+  position: relative; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3); cursor: pointer;
+  background: var(--bg); border: var(--stroke-hair) solid var(--hairline);
+}
+.theme-choice:hover { border-color: var(--line-strong); }
+.theme-choice--on { border-color: var(--ink); box-shadow: inset var(--stroke-heavy) 0 0 var(--acid); }
+.theme-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-choice:has(input:focus-visible) { outline: var(--stroke-rule) solid var(--focus); outline-offset: 2px; }
+.theme-choice__swatch {
+  display: block; height: 40px; border: var(--stroke-hair) solid var(--hairline); position: relative;
+}
+.theme-choice__swatch span { position: absolute; left: 8px; bottom: 8px; width: 24px; height: 4px; }
+.theme-choice__swatch--void { background: #000000; }
+.theme-choice__swatch--void span { background: #c8ff1a; }
+.theme-choice__swatch--paper { background: #ecece6; }
+.theme-choice__swatch--paper span { background: #0a0b0c; }
+.theme-choice__text { display: flex; flex-direction: column; gap: 2px; }
+.theme-choice__name { font-family: var(--font-serif); font-weight: 400; font-size: 18px; line-height: 20px; text-transform: uppercase; letter-spacing: 0.02em; }
+.theme-choice__hint { font-size: 12px; color: var(--ink-muted); }
 
 .thread-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 .thread-list__empty { padding: var(--space-3) var(--space-4); color: var(--ink-muted); font-size: 12px; }
