@@ -109,7 +109,6 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const models = useStore((s) => s.models);
   const home = useStore((s) => s.home);
   const [draft, setDraft] = useState("");
-  const [theme, setTheme] = useState(() => document.documentElement.getAttribute("data-theme") ?? "void");
   const scrollRef = useStickToBottom(view);
   const busyNow = !!view?.state.busy;
   const submit = (text: string) => {
@@ -139,17 +138,6 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const busy = state.busy;
   const model = state.model;
   const queued = state.queue.steering.length + state.queue.followUp.length;
-
-  const toggleTheme = () => {
-    const next = theme === "paper" ? "void" : "paper";
-    document.documentElement.setAttribute("data-theme", next);
-    try {
-      localStorage.setItem("pi-web-theme", next);
-    } catch {
-      // Theme still applies for this page view.
-    }
-    setTheme(next);
-  };
 
   const modelItems = models.map((m) => ({ value: `${m.provider}/${m.id}`, label: m.name || m.id, code: m.provider }));
   const modelValue = model ? `${model.provider}/${model.id}` : undefined;
@@ -188,9 +176,6 @@ export function ThreadView({ threadId }: { threadId: string }) {
           />,
         ]
       : []),
-    <Button key="theme" size="xs" variant="ghost" onClick={toggleTheme} aria-label="Switch theme">
-      {theme === "paper" ? "Void" : "Paper"}
-    </Button>,
   ];
 
   // CyAc's Composer swaps Send for Stop while busy. Once there is text, show Send again

@@ -4,6 +4,7 @@ import { Badge, Button, Field } from "../cyac";
 import { send } from "../socket";
 import { useStore } from "../store";
 import { ago, basename, pad, tildify } from "./format";
+import { SettingsModal } from "./SettingsModal";
 
 function ThreadRow({ t, index, active }: { t: ThreadSummary; index: number; active: boolean }) {
   return (
@@ -48,6 +49,7 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
   const [creating, setCreating] = useState(false);
   const [cwd, setCwd] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const visible = threads.filter((t) => (showArchived ? t.archived : !t.archived));
   const archivedCount = threads.filter((t) => t.archived).length;
@@ -131,13 +133,18 @@ export function Sidebar({ onPicked }: { onPicked?: () => void }) {
         )}
       </ul>
 
-      {(archivedCount > 0 || showArchived) && (
-        <div className="sidebar__foot">
+      <div className="sidebar__foot">
+        {(archivedCount > 0 || showArchived) && (
           <Button variant="ghost" size="s" onClick={() => setShowArchived((v) => !v)}>
             {showArchived ? "Back to threads" : `Archived ${pad(archivedCount)}`}
           </Button>
-        </div>
-      )}
+        )}
+        <span className="sidebar__foot-spacer" />
+        <Button variant="ghost" size="s" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">
+          Settings
+        </Button>
+      </div>
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </nav>
   );
 }
