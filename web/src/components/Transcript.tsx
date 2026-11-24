@@ -245,7 +245,8 @@ export const Transcript = memo(function Transcript({
           <Fragment key={`${g.kind}-${g.start}`}>
             {g.kind === "user" ? (
               <Message role="user" name="You" time={clock(g.messages[0]?.timestamp)}>
-                <Markdown text={textContent(g.messages[0]!)} />
+                {/* What you typed, verbatim: Markdown would join single newlines and eat pasted layout. */}
+                <div className="user-text">{textContent(g.messages[0]!)}</div>
               </Message>
             ) : g.kind === "assistant" ? (
               <AssistantTurn

@@ -261,6 +261,7 @@ body {
 
 /* ---------- transcript bits ---------- */
 
+.user-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .md { display: flex; flex-direction: column; gap: var(--space-3); overflow-wrap: anywhere; }
 .md > * { margin: 0; }
 .md ul, .md ol { padding-left: var(--space-6); margin: 0; }
