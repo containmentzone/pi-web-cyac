@@ -207,7 +207,7 @@ export type ClientMsg =
 // ---------- server -> client ----------
 
 export type ServerMsg =
-  | { type: "hello"; defaultCwd: string; home: string; models: ModelRef[]; version: string }
+  | { type: "hello"; defaultCwd: string; home: string; models: ModelRef[]; version: string; terminal: boolean }
   | { type: "threads"; threads: ThreadSummary[] }
   | { type: "snapshot"; threadId: string; snapshot: Snapshot }
   | { type: "event"; threadId: string; event: PiEvent }
@@ -222,3 +222,17 @@ export type ServerMsg =
   | { type: "editor_text"; threadId: string; text: string }
   | { type: "focus"; threadId: string; reqId?: string }
   | { type: "error"; threadId?: string; message: string };
+
+// ---------- terminal socket (/ws/term?thread=<id>) ----------
+
+export type TermClientMsg =
+  | { type: "open"; cols: number; rows: number }
+  | { type: "input"; data: string }
+  | { type: "resize"; cols: number; rows: number }
+  | { type: "kill" };
+
+export type TermServerMsg =
+  | { type: "ready"; cwd: string; pid: number; replay: string; noNewPrivs: boolean }
+  | { type: "output"; data: string }
+  | { type: "exit"; code: number }
+  | { type: "error"; message: string };

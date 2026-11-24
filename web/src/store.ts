@@ -45,6 +45,10 @@ export interface AppState {
   home: string;
   models: ModelRef[];
   version: string;
+  /** Server allows the shell panel (PI_WEB_TERMINAL not turned off). */
+  terminalEnabled: boolean;
+  /** Threads whose shell panel is showing. The shell itself lives on the server either way. */
+  terminalOpen: Record<string, boolean>;
   threads: ThreadSummary[];
   threadsLoaded: boolean;
   current: string | null;
@@ -59,6 +63,8 @@ export const useStore = create<AppState>(() => ({
   home: "",
   models: [],
   version: "",
+  terminalEnabled: false,
+  terminalOpen: readTerminalOpen(),
   threads: [],
   threadsLoaded: false,
   current: null,
@@ -204,7 +210,7 @@ function applyEvent(v: ThreadView, e: PiEvent & Record<string, any>): ThreadView
 export function handleServerMessage(msg: ServerMsg): void {
   switch (msg.type) {
     case "hello":
-      useStore.setState({ defaultCwd: msg.defaultCwd, home: msg.home, models: msg.models, version: msg.version });
+      useStore.setState({ defaultCwd: msg.defaultCwd, home: msg.home, models: msg.models, version: msg.version, terminalEnabled: !!msg.terminal });
       return;
     case "threads":
       useStore.setState({ threads: msg.threads, threadsLoaded: true });
@@ -300,4 +306,24 @@ export function navigate(threadId: string | null): void {
   const hash = threadId ? `#/t/${encodeURIComponent(threadId)}` : "#/";
   if (window.location.hash !== hash) window.location.hash = hash;
   else useStore.setState({ current: threadId });
+}
+
+function readTerminalOpen(): Record<string, boolean> {
+  try {
+    const ids = JSON.parse(localStorage.getItem("pi-web-term-open") ?? "[]") as unknown;
+    return Array.isArray(ids) ? Object.fromEntries(ids.filter((i) => typeof i === "string").map((i) => [i, true])) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Show or hide a thread's terminal panel; remembered across reloads in this browser. */
+export function toggleTerminal(threadId: string, open?: boolean): void {
+  useStore.setState((s) => ({ terminalOpen: { ...s.terminalOpen, [threadId]: open ?? !s.terminalOpen[threadId] } }));
+  try {
+    const ids = Object.entries(useStore.getState().terminalOpen).filter(([, v]) => v).map(([k]) => k);
+    localStorage.setItem("pi-web-term-open", JSON.stringify(ids.slice(-50)));
+  } catch {
+    // Panel state resets on reload.
+  }
 }

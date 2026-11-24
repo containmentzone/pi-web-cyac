@@ -2,9 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ThreadSummary, Widget } from "../../../shared/protocol";
 import { Button, Composer, Loader, Menu, Metric, Panel, StatusBar } from "../cyac";
 import { send } from "../socket";
-import { type ThreadView as View, useStore } from "../store";
+import { type ThreadView as View, toggleTerminal, useStore } from "../store";
 import { tildify, tokens } from "./format";
 import { usePalette } from "./Palette";
+import { TerminalPanel } from "./TerminalPanel";
 import { Transcript } from "./Transcript";
 
 function Widgets({ widgets, placement }: { widgets: Record<string, Widget>; placement: Widget["placement"] }) {
@@ -28,6 +29,8 @@ function Header({ thread, view }: { thread?: ThreadSummary; view: View }) {
   const home = useStore((s) => s.home);
   const title = view.state.extTitle || view.state.title || thread?.title || "Thread";
   const archived = !!thread?.archived;
+  const terminalEnabled = useStore((s) => s.terminalEnabled);
+  const terminalOpen = useStore((s) => !!s.terminalOpen[threadId]);
 
   return (
     <header className="thread-head">
@@ -61,6 +64,18 @@ function Header({ thread, view }: { thread?: ThreadSummary; view: View }) {
         {thread ? tildify(thread.cwd, home) : ""}
       </span>
       <span className="thread-head__actions">
+        {terminalEnabled && (
+          <Button
+            size="s"
+            variant={terminalOpen ? "secondary" : "ghost"}
+            code="TTY"
+            aria-pressed={terminalOpen}
+            title="Terminal in this thread's folder (Ctrl+`)"
+            onClick={() => toggleTerminal(threadId)}
+          >
+            Terminal
+          </Button>
+        )}
         <Menu
           size="s"
           variant="ghost"
@@ -110,6 +125,21 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const home = useStore((s) => s.home);
   const [draft, setDraft] = useState("");
   const scrollRef = useStickToBottom(view);
+  const terminalEnabled = useStore((s) => s.terminalEnabled);
+  const terminalOpen = useStore((s) => !!s.terminalOpen[threadId]);
+
+  // Ctrl+` shows and hides the terminal, as in most editors.
+  useEffect(() => {
+    if (!terminalEnabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.altKey && !e.metaKey && e.key === "`") {
+        e.preventDefault();
+        toggleTerminal(threadId);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [threadId, terminalEnabled]);
   const busyNow = !!view?.state.busy;
   const submit = (text: string) => {
     if (!text.trim()) return;
@@ -202,6 +232,7 @@ export function ThreadView({ threadId }: { threadId: string }) {
           </div>
         )}
       </div>
+      {terminalEnabled && terminalOpen && <TerminalPanel threadId={threadId} />}
       <div className="thread__bottom">
         <Widgets widgets={view.widgets} placement="aboveEditor" />
         <div className="composer-wrap" onKeyDownCapture={palette.onKeyDownCapture}>

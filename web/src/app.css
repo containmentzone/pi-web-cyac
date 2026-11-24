@@ -424,3 +424,57 @@ body {
 .term:focus-visible, .term:focus { border-color: var(--acid); }
 .term__line { min-height: 16px; }
 .term a { color: inherit; }
+
+/* ---------- shell terminal (docked under the transcript) ---------- */
+.thread-head__actions { display: flex; align-items: center; gap: var(--space-2); }
+.tty {
+  position: relative; flex: none;
+  display: flex; flex-direction: column; min-height: 120px;
+  border-top: var(--stroke-rule) solid var(--line-strong);
+  background: var(--bg);
+}
+.tty:focus-within { border-top-color: var(--acid); }
+.tty__grip {
+  position: absolute; top: -6px; left: 0; right: 0; height: 10px; z-index: 2;
+  cursor: row-resize; touch-action: none;
+}
+.tty__head {
+  flex: none; display: flex; align-items: center; gap: var(--space-3);
+  min-height: 32px; padding: 0 var(--space-2) 0 var(--space-6);
+  border-bottom: var(--stroke-hair) solid var(--hairline);
+  background: var(--surface);
+}
+.tty__code, .tty__cwd {
+  font-family: var(--font-mono); font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.tty__code { color: var(--ink); font-weight: 500; }
+.tty__cwd { color: var(--ink-muted); text-transform: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+.tty__actions { flex: none; display: flex; gap: var(--space-1); }
+.tty__error, .tty__warn {
+  flex: none; display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-1) var(--space-6);
+  border-bottom: var(--stroke-hair) solid var(--hairline);
+  font-size: 12px; color: var(--ink-muted);
+}
+.tty__error { color: var(--pulse-text); font-family: var(--font-mono); }
+.tty__screen { flex: 1 1 auto; min-height: 0; padding: var(--space-2) 0 0 var(--space-6); overflow: hidden; }
+.tty__screen .xterm { height: 100%; }
+.tty__screen .xterm-viewport { background: transparent !important; }
+.tty__keys { display: none; }
+@media (any-pointer: coarse) {
+  .tty__keys {
+    flex: none; display: flex; gap: var(--space-1); overflow-x: auto;
+    padding: var(--space-1) var(--space-2); border-top: var(--stroke-hair) solid var(--hairline);
+    background: var(--surface);
+  }
+  .tty__key {
+    flex: none; min-width: 40px; height: 32px; padding: 0 var(--space-2);
+    font-family: var(--font-mono); font-size: 12px; color: var(--ink);
+    background: var(--surface-raised); border: var(--stroke-hair) solid var(--hairline); border-radius: var(--radius-0);
+  }
+  .tty__key:active { background: var(--acid); color: var(--on-acid); border-color: var(--acid); }
+}
+@media (max-width: 760px) {
+  .tty__head { padding-left: var(--space-4); }
+  .tty__screen { padding-left: var(--space-2); }
+}

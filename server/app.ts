@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isIP } from "node:net";
 import { homedir } from "node:os";
 import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
@@ -11,6 +12,7 @@ import type { ClientMsg, ServerMsg } from "../shared/protocol.js";
 import { completeArgs } from "./commands.js";
 import { config } from "./config.js";
 import type { Client, LiveThread } from "./live-thread.js";
+import { TerminalManager } from "./terminal.js";
 import { ThreadManager } from "./threads.js";
 
 export interface WebServerOptions {
@@ -31,6 +33,7 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
   const host = options.host ?? config.host;
   const port = options.port ?? config.port;
   const manager = await ThreadManager.create();
+  const terminals = new TerminalManager(async (threadId) => (await manager.list()).find((t) => t.id === threadId)?.cwd);
   const app = new Hono();
 
   app.get("/api/health", (c) => c.json({ ok: true, pi: VERSION }));
@@ -141,13 +144,14 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
       }
     });
 
+    ws.on("error", () => ws.terminate());
     ws.on("close", () => {
       manager.clients.delete(client);
       for (const thread of subscriptions.values()) thread.detach(client);
       subscriptions.clear();
     });
 
-    client.send({ type: "hello", defaultCwd: config.defaultCwd, home: homedir(), models: await manager.availableModels(), version: VERSION });
+    client.send({ type: "hello", defaultCwd: config.defaultCwd, home: homedir(), models: await manager.availableModels(), version: VERSION, terminal: config.terminal });
     client.send({ type: "threads", threads: await manager.list() });
   });
 
@@ -162,13 +166,22 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
   log(`[pi-web] pi ${VERSION} · ${url}`);
   if (!config.webDir) log("[pi-web] no built frontend found; API and WebSocket only");
 
+  const termWss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
+
   server.on("upgrade", (req: IncomingMessage, socket, head) => {
     const reqUrl = new URL(req.url ?? "/", "http://localhost");
-    if (reqUrl.pathname !== "/ws") {
-      socket.destroy();
+    if (reqUrl.pathname === "/ws") {
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
       return;
     }
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
+    const threadId = reqUrl.searchParams.get("thread");
+    // A shell is a step past prompting the agent, so only pages served by this server may open one:
+    // another site open in the same browser must not reach it through the tailnet address.
+    if (reqUrl.pathname === "/ws/term" && config.terminal && threadId && allowedHost(req) && sameOrigin(req)) {
+      termWss.handleUpgrade(req, socket, head, (ws) => void terminals.handle(ws, threadId));
+      return;
+    }
+    socket.destroy();
   });
 
   let closing: Promise<void> | undefined;
@@ -177,10 +190,55 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
     close() {
       closing ??= (async () => {
         for (const ws of wss.clients) ws.close(1001, "server shutting down");
+        for (const ws of termWss.clients) ws.close(1001, "server shutting down");
+        terminals.shutdown();
         await manager.shutdown();
         await new Promise<void>((resolve) => server.close(() => resolve()));
       })();
       return closing;
     },
   };
+}
+
+/**
+ * DNS rebinding guard: a hostile domain re-pointed at this machine would pass the Origin check, but its
+ * Host header still names that domain. Allow IP literals, localhost, single-label names (MagicDNS short
+ * names), *.ts.net, and anything listed in PI_WEB_ALLOWED_HOSTS.
+ */
+function allowedHost(req: IncomingMessage): boolean {
+  if (!req.headers.host || !isAllowedHostName(req.headers.host)) return false;
+  // A proxy may rewrite Host to localhost and pass the browser's host along; that one must pass too.
+  const forwarded = req.headers["x-forwarded-host"];
+  if (forwarded === undefined) return true;
+  const entries = (Array.isArray(forwarded) ? forwarded.join(",") : forwarded).split(",").map((h) => h.trim());
+  return entries.every((h) => h !== "" && isAllowedHostName(h));
+}
+
+function isAllowedHostName(raw: string): boolean {
+  let hostname: string;
+  try {
+    hostname = new URL(`http://${raw}`).hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return false;
+  }
+  const bare = hostname.replace(/^\[|\]$/g, "");
+  if (isIP(bare)) return true;
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+  if (!hostname.includes(".")) return true;
+  if (hostname.endsWith(".ts.net")) return true;
+  return config.allowedHosts.some((h) => hostname === h || (h.startsWith(".") && hostname.endsWith(h)));
+}
+
+/** True when the browser says the page came from this host (or sent no Origin, like a CLI client). */
+function sameOrigin(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try {
+    const host = new URL(origin).host;
+    // Reverse proxies such as `tailscale serve` may rewrite Host and pass the original along.
+    const forwarded = req.headers["x-forwarded-host"];
+    return host === req.headers.host || (typeof forwarded === "string" && forwarded.split(",").some((h) => h.trim() === host));
+  } catch {
+    return false;
+  }
 }
