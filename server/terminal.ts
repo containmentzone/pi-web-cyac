@@ -49,6 +49,9 @@ function noNewPrivs(): boolean {
   }
 }
 
+/** A viewer this far behind is dropped; its tab reconnects and catches up from the replay buffer. */
+const MAX_QUEUED_BYTES = 4 * 1024 * 1024;
+
 /** Recent output kept for replay when a browser (re)attaches. */
 const SCROLLBACK_BYTES = 256 * 1024;
 
@@ -88,7 +91,15 @@ class Shell {
 
   broadcast(msg: TermServerMsg): void {
     const raw = JSON.stringify(msg);
-    for (const ws of this.sockets) if (ws.readyState === ws.OPEN) ws.send(raw);
+    for (const ws of this.sockets) {
+      if (ws.readyState !== ws.OPEN) continue;
+      if (ws.bufferedAmount > MAX_QUEUED_BYTES) {
+        this.sockets.delete(ws);
+        ws.terminate();
+        continue;
+      }
+      ws.send(raw);
+    }
   }
 
   attach(ws: WebSocket): void {
@@ -109,6 +120,9 @@ class Shell {
 
 export class TerminalManager {
   private shells = new Map<string, Shell>();
+  /** Shells being started, so two opens for one thread share a single shell. */
+  private pending = new Map<string, Promise<Shell>>();
+  private closed = false;
 
   constructor(private resolveCwd: (threadId: string) => Promise<string | undefined>) {}
 
@@ -117,17 +131,35 @@ export class TerminalManager {
     const send = (msg: TermServerMsg) => ws.readyState === ws.OPEN && ws.send(JSON.stringify(msg));
     let shell: Shell | undefined;
 
-    const start = async (cols: number, rows: number) => {
+    const start = async (cols: number, rows: number): Promise<Shell> => {
       const existing = this.shells.get(threadId);
-      if (existing && !existing.exited) return existing;
-      const cwd = await this.resolveCwd(threadId);
-      if (!cwd) throw new Error("Unknown thread");
-      const created = new Shell(cwd, cols, rows, () => {
-        if (this.shells.get(threadId) === created) this.shells.delete(threadId);
-      });
-      this.shells.set(threadId, created);
-      return created;
+      if (existing && !existing.exited) {
+        // Reattaching from a panel of another size: the shell takes the newest size.
+        existing.pty.resize(cols, rows);
+        return existing;
+      }
+      let creating = this.pending.get(threadId);
+      if (!creating) {
+        creating = (async () => {
+          const cwd = await this.resolveCwd(threadId);
+          if (this.closed) throw new Error("Server is shutting down");
+          if (!cwd) throw new Error("Unknown thread");
+          const created = new Shell(cwd, cols, rows, () => {
+            if (this.shells.get(threadId) === created) this.shells.delete(threadId);
+          });
+          this.shells.set(threadId, created);
+          return created;
+        })().finally(() => this.pending.delete(threadId));
+        this.pending.set(threadId, creating);
+      }
+      return creating;
     };
+
+    // ws emits "error" for oversized or malformed frames; without a listener that would crash the server.
+    ws.on("error", () => {
+      shell?.sockets.delete(ws);
+      ws.terminate();
+    });
 
     ws.on("message", async (data) => {
       let msg: TermClientMsg;
@@ -162,6 +194,7 @@ export class TerminalManager {
   }
 
   shutdown(): void {
+    this.closed = true;
     for (const shell of this.shells.values()) shell.kill();
     this.shells.clear();
   }

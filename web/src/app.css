@@ -461,7 +461,7 @@ body {
 .tty__screen .xterm { height: 100%; }
 .tty__screen .xterm-viewport { background: transparent !important; }
 .tty__keys { display: none; }
-@media (pointer: coarse) {
+@media (any-pointer: coarse) {
   .tty__keys {
     flex: none; display: flex; gap: var(--space-1); overflow-x: auto;
     padding: var(--space-1) var(--space-2); border-top: var(--stroke-hair) solid var(--hairline);

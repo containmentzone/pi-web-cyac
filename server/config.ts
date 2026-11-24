@@ -42,5 +42,10 @@ export const config = {
   idleMinutes: int("PI_WEB_IDLE_MINUTES", 30),
   /** Interactive shell panel in the browser. PI_WEB_TERMINAL=0 turns it off. */
   terminal: !/^(0|false|off|no)$/i.test(process.env.PI_WEB_TERMINAL ?? ""),
+  /** Extra host names the terminal socket accepts (comma-separated; ".example.com" allows subdomains). */
+  allowedHosts: (process.env.PI_WEB_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean),
   webDir: findWebDir(),
 };

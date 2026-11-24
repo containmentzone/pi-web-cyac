@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isIP } from "node:net";
 import { homedir } from "node:os";
 import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
@@ -143,6 +144,7 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
       }
     });
 
+    ws.on("error", () => ws.terminate());
     ws.on("close", () => {
       manager.clients.delete(client);
       for (const thread of subscriptions.values()) thread.detach(client);
@@ -175,7 +177,7 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
     const threadId = reqUrl.searchParams.get("thread");
     // A shell is a step past prompting the agent, so only pages served by this server may open one:
     // another site open in the same browser must not reach it through the tailnet address.
-    if (reqUrl.pathname === "/ws/term" && config.terminal && threadId && sameOrigin(req)) {
+    if (reqUrl.pathname === "/ws/term" && config.terminal && threadId && allowedHost(req) && sameOrigin(req)) {
       termWss.handleUpgrade(req, socket, head, (ws) => void terminals.handle(ws, threadId));
       return;
     }
@@ -196,6 +198,28 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
       return closing;
     },
   };
+}
+
+/**
+ * DNS rebinding guard: a hostile domain re-pointed at this machine would pass the Origin check, but its
+ * Host header still names that domain. Allow IP literals, localhost, single-label names (MagicDNS short
+ * names), *.ts.net, and anything listed in PI_WEB_ALLOWED_HOSTS.
+ */
+function allowedHost(req: IncomingMessage): boolean {
+  const raw = req.headers.host;
+  if (!raw) return false;
+  let hostname: string;
+  try {
+    hostname = new URL(`http://${raw}`).hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return false;
+  }
+  const bare = hostname.replace(/^\[|\]$/g, "");
+  if (isIP(bare)) return true;
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+  if (!hostname.includes(".")) return true;
+  if (hostname.endsWith(".ts.net")) return true;
+  return config.allowedHosts.some((h) => hostname === h || (h.startsWith(".") && hostname.endsWith(h)));
 }
 
 /** True when the browser says the page came from this host (or sent no Origin, like a CLI client). */

@@ -44,7 +44,7 @@ Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter run
 
 **Terminal** in a thread's header (or Ctrl+`) opens a shell docked under the transcript, started in the thread's working directory. It uses `$PI_WEB_SHELL`, then `$SHELL`, then bash, as a login shell. The shell belongs to the thread, not the browser tab: hiding the panel or reloading the page leaves it running, and reopening it replays recent output. It ends when you exit it, press **Kill**, or the server stops. Every browser looking at the thread shares the same shell. On touch screens a key strip adds Esc, Tab, Ctrl+C, Ctrl+D and arrows.
 
-The shell runs as the user running pi, with the same rights the agent's bash tool has. Only pages served by the web UI itself can open it (the WebSocket checks `Origin`), so another site open in the same browser can't reach it. If pi was started with Linux `no_new_privs` set (systemd `NoNewPrivileges=yes`, or options that imply it such as `SystemCallFilter=`, `RestrictSUIDSGID=`, `MemoryDenyWriteExecute=`, `DynamicUser=`; Docker `no-new-privileges`), sudo can't work in the shell or for the agent, and the panel says so. That flag is inherited and can't be cleared from inside, so it has to be turned off where pi is launched.
+The shell runs as the user running pi, with the same rights the agent's bash tool has. Only pages served by the web UI itself can open it: the WebSocket checks that `Origin` matches the host, and that the host is an IP address, `localhost`, a MagicDNS name (`box` or `*.ts.net`), or listed in `PI_WEB_ALLOWED_HOSTS`. That keeps other sites open in the same browser out, including through DNS rebinding. If pi was started with Linux `no_new_privs` set (systemd `NoNewPrivileges=yes`, or options that imply it such as `SystemCallFilter=`, `RestrictSUIDSGID=`, `MemoryDenyWriteExecute=`, `DynamicUser=`; Docker `no-new-privileges`), sudo can't work in the shell or for the agent, and the panel says so. That flag is inherited and can't be cleared from inside, so it has to be turned off where pi is launched.
 
 PTY support comes from `@lydell/node-pty` prebuilds (Linux, macOS and Windows on x64 and arm64). On other platforms the panel shows an error and everything else keeps working.
 
@@ -63,6 +63,7 @@ PTY support comes from `@lydell/node-pty` prebuilds (Linux, macOS and Windows on
 | `PI_WEB_IDLE_MINUTES` | `30` | Idle, unwatched sessions are unloaded and reopen from disk on demand |
 | `PI_WEB_TERMINAL` | on | `0` turns the shell panel off |
 | `PI_WEB_SHELL` | `$SHELL` | Shell for the terminal panel |
+| `PI_WEB_ALLOWED_HOSTS` | none | Extra host names for the terminal (comma-separated, `.example.com` covers subdomains), e.g. behind your own reverse proxy |
 
 ## Develop
 
