@@ -206,9 +206,13 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
  * names), *.ts.net, and anything listed in PI_WEB_ALLOWED_HOSTS.
  */
 function allowedHost(req: IncomingMessage): boolean {
+  const forwarded = req.headers["x-forwarded-host"];
+  // Behind a proxy that only forwards the hosts it serves (PI_WEB_TRUST_PROXY, e.g. the cyac proxy),
+  // its X-Forwarded-Host is good enough: a browser cannot set that header on a WebSocket, so a rebound
+  // domain reaching this port directly has none and falls through to the checks below.
+  if (config.trustProxy && typeof forwarded === "string" && forwarded !== "") return true;
   if (!req.headers.host || !isAllowedHostName(req.headers.host)) return false;
   // A proxy may rewrite Host to localhost and pass the browser's host along; that one must pass too.
-  const forwarded = req.headers["x-forwarded-host"];
   if (forwarded === undefined) return true;
   const entries = (Array.isArray(forwarded) ? forwarded.join(",") : forwarded).split(",").map((h) => h.trim());
   return entries.every((h) => h !== "" && isAllowedHostName(h));

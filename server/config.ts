@@ -47,5 +47,7 @@ export const config = {
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean),
+  /** The reverse proxy in front only forwards hosts it serves, so its X-Forwarded-Host is trusted. */
+  trustProxy: /^(1|true|on|yes)$/i.test(process.env.PI_WEB_TRUST_PROXY ?? ""),
   webDir: findWebDir(),
 };
