@@ -197,6 +197,7 @@ export type ClientMsg =
   | { type: "abort"; threadId: string }
   | { type: "set_model"; threadId: string; provider: string; modelId: string }
   | { type: "set_thinking"; threadId: string; level: string }
+  | { type: "set_default_model"; provider: string; modelId: string }
   | { type: "ui_response"; threadId: string; response: UIResponse }
   | { type: "ui_action"; threadId: string; id: string; action: UIAction }
   | { type: "complete"; threadId: string; text: string; reqId: number }
@@ -206,8 +207,12 @@ export type ClientMsg =
 
 // ---------- server -> client ----------
 
+/** The model new threads start with (pi's defaultProvider/defaultModel setting), if one is set. */
+export type DefaultModel = { provider: string; id: string } | null;
+
 export type ServerMsg =
-  | { type: "hello"; defaultCwd: string; home: string; models: ModelRef[]; version: string; terminal: boolean }
+  | { type: "hello"; defaultCwd: string; home: string; models: ModelRef[]; version: string; terminal: boolean; defaultModel: DefaultModel }
+  | { type: "default_model"; defaultModel: DefaultModel }
   | { type: "threads"; threads: ThreadSummary[] }
   | { type: "snapshot"; threadId: string; snapshot: Snapshot }
   | { type: "event"; threadId: string; event: PiEvent }

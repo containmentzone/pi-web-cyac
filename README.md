@@ -38,7 +38,7 @@ Inside pi:
 
 The command prints the URL. The server lives as long as that pi process. To start it without typing the command, set `PI_WEB_AUTOSTART=1` (for example `PI_WEB_AUTOSTART=1 PI_WEB_HOST=100.x.y.z pi` in a tmux pane on the box).
 
-Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter runs, Esc closes. `/login` sign-in links and device codes appear as notices in the thread. OAuth flows that redirect to `localhost` reach the machine running pi, so when the browser is elsewhere, paste the code or redirect URL into the card when pi asks for it.
+Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter runs, Esc closes. **Settings** in the sidebar sets the theme and the default model for new threads (pi's global `defaultProvider`/`defaultModel`, the same setting the TUI's `/model` saves). `/login` sign-in links and device codes appear as notices in the thread. OAuth flows that redirect to `localhost` reach the machine running pi, so when the browser is elsewhere, paste the code or redirect URL into the card when pi asks for it.
 
 ### Terminal
 
