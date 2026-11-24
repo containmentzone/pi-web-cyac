@@ -40,6 +40,14 @@ The command prints the URL. The server lives as long as that pi process. To star
 
 Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter runs, Esc closes. `/login` sign-in links and device codes appear as notices in the thread. OAuth flows that redirect to `localhost` reach the machine running pi, so when the browser is elsewhere, paste the code or redirect URL into the card when pi asks for it.
 
+### Terminal
+
+**Terminal** in a thread's header (or Ctrl+`) opens a shell docked under the transcript, started in the thread's working directory. It uses `$PI_WEB_SHELL`, then `$SHELL`, then bash, as a login shell. The shell belongs to the thread, not the browser tab: hiding the panel or reloading the page leaves it running, and reopening it replays recent output. It ends when you exit it, press **Kill**, or the server stops. Every browser looking at the thread shares the same shell. On touch screens a key strip adds Esc, Tab, Ctrl+C, Ctrl+D and arrows.
+
+The shell runs as the user running pi, with the same rights the agent's bash tool has. Only pages served by the web UI itself can open it (the WebSocket checks `Origin`), so another site open in the same browser can't reach it. If pi was started with Linux `no_new_privs` set (systemd `NoNewPrivileges=yes`, or options that imply it such as `SystemCallFilter=`, `RestrictSUIDSGID=`, `MemoryDenyWriteExecute=`, `DynamicUser=`; Docker `no-new-privileges`), sudo can't work in the shell or for the agent, and the panel says so. That flag is inherited and can't be cleared from inside, so it has to be turned off where pi is launched.
+
+PTY support comes from `@lydell/node-pty` prebuilds (Linux, macOS and Windows on x64 and arm64). On other platforms the panel shows an error and everything else keeps working.
+
 ### Settings
 
 `/web host:port` wins over these; the rest only come from the environment.
@@ -53,6 +61,8 @@ Type `/` in the composer for commands: arrow keys pick, Tab completes, Enter run
 | `PI_WEB_SESSION_DIR` | pi's default | Keep web threads in their own session folder |
 | `PI_WEB_STATE_FILE` | `~/.pi/agent/pi-web/threads.json` | UI-only state (archived flags) |
 | `PI_WEB_IDLE_MINUTES` | `30` | Idle, unwatched sessions are unloaded and reopen from disk on demand |
+| `PI_WEB_TERMINAL` | on | `0` turns the shell panel off |
+| `PI_WEB_SHELL` | `$SHELL` | Shell for the terminal panel |
 
 ## Develop
 
@@ -83,6 +93,7 @@ web/src/cyac/  Vendored CyAc bundle, CSS, types and tokens (tokens.css is genera
 - A thread should be driven from one place at a time. If you open the session your pi terminal is using in the web UI too, both append to the same file.
 - Extension commands that open a new session (`newSession`, `fork`, `switchSession`) open it as a new thread and focus it, instead of replacing the current one. `session_before_switch`/`session_before_fork` hooks are not run for these.
 - No branching UI, image upload or file browser yet.
+- Terminal shells are not kept across server restarts.
 - `/settings` shows the settings that matter outside a terminal; display options for pi's TUI are left out.
 
 ## Fonts

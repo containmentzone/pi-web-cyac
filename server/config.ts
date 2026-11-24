@@ -40,5 +40,7 @@ export const config = {
   stateFile: resolve(process.env.PI_WEB_STATE_FILE ?? join(getAgentDir(), "pi-web", "threads.json")),
   /** Idle live sessions with no viewers are disposed after this many minutes and reopened on demand. */
   idleMinutes: int("PI_WEB_IDLE_MINUTES", 30),
+  /** Interactive shell panel in the browser. PI_WEB_TERMINAL=0 turns it off. */
+  terminal: !/^(0|false|off|no)$/i.test(process.env.PI_WEB_TERMINAL ?? ""),
   webDir: findWebDir(),
 };
