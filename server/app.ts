@@ -3,12 +3,12 @@ import { isIP } from "node:net";
 import { homedir } from "node:os";
 import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
-import { VERSION } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { type WebSocket, WebSocketServer } from "ws";
-import type { ClientMsg, ServerMsg } from "../shared/protocol.js";
+import type { ClientMsg, DefaultModel, ServerMsg } from "../shared/protocol.js";
 import { completeArgs } from "./commands.js";
 import { config } from "./config.js";
 import type { Client, LiveThread } from "./live-thread.js";
@@ -104,6 +104,14 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
           case "archive":
             manager.setArchived(msg.threadId, msg.archived);
             return;
+          case "set_default_model": {
+            if (!manager.models.getModel(msg.provider, msg.modelId)) return fail(`Model not found: ${msg.provider}/${msg.modelId}`);
+            const settings = settingsFor(config.defaultCwd);
+            settings.setDefaultModelAndProvider(msg.provider, msg.modelId);
+            await settings.flush();
+            manager.broadcastAll({ type: "default_model", defaultModel: defaultModel() });
+            return;
+          }
         }
         const thread = await manager.get(msg.threadId);
         switch (msg.type) {
@@ -151,7 +159,7 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
       subscriptions.clear();
     });
 
-    client.send({ type: "hello", defaultCwd: config.defaultCwd, home: homedir(), models: await manager.availableModels(), version: VERSION, terminal: config.terminal });
+    client.send({ type: "hello", defaultCwd: config.defaultCwd, home: homedir(), models: await manager.availableModels(), version: VERSION, terminal: config.terminal, defaultModel: defaultModel() });
     client.send({ type: "threads", threads: await manager.list() });
   });
 
@@ -198,6 +206,19 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
       return closing;
     },
   };
+}
+
+/** pi's settings as a new thread in cwd sees them (global, then that project's). */
+function settingsFor(cwd: string): SettingsManager {
+  return SettingsManager.create(cwd, getAgentDir());
+}
+
+/** The default model for new threads in the default working directory. Writes go to global settings. */
+function defaultModel(): DefaultModel {
+  const settings = settingsFor(config.defaultCwd);
+  const provider = settings.getDefaultProvider();
+  const id = settings.getDefaultModel();
+  return provider && id ? { provider, id } : null;
 }
 
 /**

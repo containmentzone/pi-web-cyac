@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   CommandInfo,
   ContentBlock,
+  DefaultModel,
   ModelRef,
   Notice,
   PickItem,
@@ -44,6 +45,8 @@ export interface AppState {
   /** Server's home directory, for showing paths as ~/… . */
   home: string;
   models: ModelRef[];
+  /** Model new threads start with; set in the settings modal. */
+  defaultModel: DefaultModel;
   version: string;
   /** Server allows the shell panel (PI_WEB_TERMINAL not turned off). */
   terminalEnabled: boolean;
@@ -62,6 +65,7 @@ export const useStore = create<AppState>(() => ({
   defaultCwd: "",
   home: "",
   models: [],
+  defaultModel: null,
   version: "",
   terminalEnabled: false,
   terminalOpen: readTerminalOpen(),
@@ -210,7 +214,10 @@ function applyEvent(v: ThreadView, e: PiEvent & Record<string, any>): ThreadView
 export function handleServerMessage(msg: ServerMsg): void {
   switch (msg.type) {
     case "hello":
-      useStore.setState({ defaultCwd: msg.defaultCwd, home: msg.home, models: msg.models, version: msg.version, terminalEnabled: !!msg.terminal });
+      useStore.setState({ defaultCwd: msg.defaultCwd, home: msg.home, models: msg.models, defaultModel: msg.defaultModel, version: msg.version, terminalEnabled: !!msg.terminal });
+      return;
+    case "default_model":
+      useStore.setState({ defaultModel: msg.defaultModel });
       return;
     case "threads":
       useStore.setState({ threads: msg.threads, threadsLoaded: true });
