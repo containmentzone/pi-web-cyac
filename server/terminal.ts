@@ -172,7 +172,10 @@ export class TerminalManager {
         switch (msg.type) {
           case "open": {
             shell?.sockets.delete(ws);
-            shell = await start(clamp(msg.cols, 2, 500), clamp(msg.rows, 2, 300));
+            const started = await start(clamp(msg.cols, 2, 500), clamp(msg.rows, 2, 300));
+            // The tab may have gone away while the shell was starting; the shell stays for the next viewer.
+            if (ws.readyState !== ws.OPEN) return;
+            shell = started;
             shell.attach(ws);
             return;
           }
