@@ -194,6 +194,8 @@ export type ClientMsg =
   | { type: "subscribe"; threadId: string }
   | { type: "unsubscribe"; threadId: string }
   | { type: "prompt"; threadId: string; text: string; behavior?: "steer" | "followUp" }
+  /** Claim (typing: true) or give back (false) the thread's composer lease. Claims renew it. */
+  | { type: "compose"; threadId: string; typing: boolean }
   | { type: "abort"; threadId: string }
   | { type: "set_model"; threadId: string; provider: string; modelId: string }
   | { type: "set_thinking"; threadId: string; level: string }
@@ -225,6 +227,8 @@ export type ServerMsg =
   | { type: "status"; threadId: string; key: string; text?: string }
   | { type: "widget"; threadId: string; key: string; widget?: Widget }
   | { type: "editor_text"; threadId: string; text: string }
+  /** Who may type in the thread's composer: nobody (held false), this tab (mine), or another tab. */
+  | { type: "lease"; threadId: string; held: boolean; mine: boolean }
   | { type: "focus"; threadId: string; reqId?: string }
   | { type: "error"; threadId?: string; message: string };
 

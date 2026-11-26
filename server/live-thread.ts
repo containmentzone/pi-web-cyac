@@ -36,6 +36,8 @@ export interface ThreadOwner {
 }
 
 const MAX_NOTICES = 100;
+/** A composer lease lapses this long after its holder last typed. */
+const LEASE_MS = 30_000;
 
 export function toModelRef(model: AgentSession["model"]): ModelRef | null {
   if (!model) return null;
@@ -86,6 +88,8 @@ export class LiveThread implements UIHost {
   private readonly widgets = new Map<string, Widget>();
   private extTitle: string | undefined;
   private editorText = "";
+  /** The tab typing in the composer. Others see it locked until it sends, clears or goes quiet. */
+  private lease: { client: Client; timer: NodeJS.Timeout } | undefined;
   private unsubscribe: (() => void) | undefined;
 
   constructor(
@@ -115,6 +119,7 @@ export class LiveThread implements UIHost {
   }
 
   dispose(): void {
+    if (this.lease) clearTimeout(this.lease.timer);
     for (const { finish } of [...this.dialogs.values()]) finish();
     this.unsubscribe?.();
     this.session.dispose();
@@ -126,9 +131,11 @@ export class LiveThread implements UIHost {
     this.subscribers.add(client);
     this.lastActivity = Date.now();
     client.send({ type: "snapshot", threadId: this.id, snapshot: this.snapshot() });
+    this.sendLease(client);
   }
 
   detach(client: Client): void {
+    this.release(client);
     this.subscribers.delete(client);
     this.lastActivity = Date.now();
   }
@@ -189,7 +196,26 @@ export class LiveThread implements UIHost {
     };
   }
 
-  async prompt(text: string, behavior?: "steer" | "followUp"): Promise<void> {
+  /** Take or renew the composer lease. False when another tab holds it. */
+  claim(client: Client): boolean {
+    if (this.lease && this.lease.client !== client) return false;
+    const fresh = !this.lease;
+    if (this.lease) clearTimeout(this.lease.timer);
+    this.lease = { client, timer: setTimeout(() => this.release(client), LEASE_MS) };
+    if (fresh) this.pushLease();
+    return true;
+  }
+
+  release(client: Client): void {
+    if (this.lease?.client !== client) return;
+    clearTimeout(this.lease.timer);
+    this.lease = undefined;
+    this.pushLease();
+  }
+
+  async prompt(client: Client, text: string, behavior?: "steer" | "followUp"): Promise<void> {
+    if (this.lease && this.lease.client !== client) throw new Error("Someone else is typing in this thread.");
+    this.release(client);
     this.lastActivity = Date.now();
     this.editorText = "";
     try {
@@ -391,6 +417,14 @@ export class LiveThread implements UIHost {
         // Naming is cosmetic.
       }
     }
+  }
+
+  private sendLease(client: Client): void {
+    client.send({ type: "lease", threadId: this.id, held: !!this.lease, mine: this.lease?.client === client });
+  }
+
+  private pushLease(): void {
+    for (const client of this.subscribers) this.sendLease(client);
   }
 
   private broadcast(msg: ServerMsg): void {

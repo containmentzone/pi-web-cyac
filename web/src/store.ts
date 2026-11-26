@@ -36,6 +36,8 @@ export interface ThreadView {
   commands: CommandInfo[];
   /** Text an extension put into the editor; seq changes on every set so the composer can react. */
   editorText?: { text: string; seq: number };
+  /** Composer lease: held by some tab, and whether that tab is this one. */
+  lease: { held: boolean; mine: boolean };
 }
 
 export interface AppState {
@@ -92,6 +94,7 @@ function viewFromSnapshot(s: Snapshot): ThreadView {
     widgets: s.widgets,
     commands: s.commands ?? [],
     editorText: s.editorText ? { text: s.editorText, seq: ++seq } : undefined,
+    lease: { held: false, mine: false },
   };
 }
 
@@ -271,6 +274,9 @@ export function handleServerMessage(msg: ServerMsg): void {
       return;
     case "editor_text":
       updateView(msg.threadId, (v) => ({ ...v, editorText: { text: msg.text, seq: ++seq } }));
+      return;
+    case "lease":
+      updateView(msg.threadId, (v) => ({ ...v, lease: { held: msg.held, mine: msg.mine } }));
       return;
     case "focus":
       navigate(msg.threadId);
