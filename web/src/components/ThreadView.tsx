@@ -141,12 +141,29 @@ export function ThreadView({ threadId }: { threadId: string }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [threadId, terminalEnabled]);
   const busyNow = !!view?.state.busy;
+  const locked = !!view?.lease.held && !view.lease.mine;
+
+  // One tab types at a time: typing claims the thread's composer lease (renewed at most every 5s),
+  // clearing the text gives it back, and sending or leaving the thread releases it on the server.
+  const lastClaim = useRef(0);
+  const setDraftAndLease = (text: string) => {
+    setDraft(text);
+    if (!text) {
+      // Also when the grant hasn't arrived yet; the server ignores a release from a non-holder.
+      send({ type: "compose", threadId, typing: false });
+      lastClaim.current = 0;
+    } else if (!view?.lease.mine || Date.now() - lastClaim.current > 5_000) {
+      send({ type: "compose", threadId, typing: true });
+      lastClaim.current = Date.now();
+    }
+  };
   const submit = (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || locked) return;
+    lastClaim.current = 0;
     send({ type: "prompt", threadId, text, behavior: busyNow ? "steer" : undefined });
     setDraft("");
   };
-  const palette = usePalette({ threadId, draft, setDraft, commands: view?.commands ?? [], submit });
+  const palette = usePalette({ threadId, draft, setDraft: setDraftAndLease, commands: view?.commands ?? [], submit });
 
   // Drafts are per thread; extensions can also set the editor text (ctx.ui.setEditorText).
   useEffect(() => setDraft(""), [threadId]);
@@ -239,12 +256,15 @@ export function ThreadView({ threadId }: { threadId: string }) {
           {palette.element}
         <Composer
           value={draft}
-          onChange={setDraft}
+          onChange={setDraftAndLease}
           onSubmit={submit}
+          disabled={locked}
           busy={showStop}
           onStop={() => send({ type: "abort", threadId })}
           submitLabel={busy ? "Steer" : "Send"}
-          placeholder={busy ? "Steer the running agent, or Stop" : "Message pi. Type / for commands."}
+          placeholder={
+            locked ? "Someone is typing in another tab." : busy ? "Steer the running agent, or Stop" : "Message pi. Type / for commands."
+          }
           tools={
             <>
               {modelItems.length > 0 && (

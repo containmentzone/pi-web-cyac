@@ -116,7 +116,12 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
         const thread = await manager.get(msg.threadId);
         switch (msg.type) {
           case "prompt":
-            await thread.prompt(msg.text, msg.behavior);
+            await thread.prompt(client, msg.text, msg.behavior);
+            return;
+          case "compose":
+            if (!subscriptions.has(msg.threadId)) return; // only subscribers' leases are released on close
+            if (msg.typing) thread.claim(client);
+            else thread.release(client);
             return;
           case "abort":
             await thread.abort();
