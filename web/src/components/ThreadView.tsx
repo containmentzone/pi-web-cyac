@@ -149,7 +149,8 @@ export function ThreadView({ threadId }: { threadId: string }) {
   const setDraftAndLease = (text: string) => {
     setDraft(text);
     if (!text) {
-      if (view?.lease.mine) send({ type: "compose", threadId, typing: false });
+      // Also when the grant hasn't arrived yet; the server ignores a release from a non-holder.
+      send({ type: "compose", threadId, typing: false });
       lastClaim.current = 0;
     } else if (!view?.lease.mine || Date.now() - lastClaim.current > 5_000) {
       send({ type: "compose", threadId, typing: true });

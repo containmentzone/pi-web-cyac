@@ -119,6 +119,7 @@ export async function startServer(options: WebServerOptions = {}): Promise<WebSe
             await thread.prompt(client, msg.text, msg.behavior);
             return;
           case "compose":
+            if (!subscriptions.has(msg.threadId)) return; // only subscribers' leases are released on close
             if (msg.typing) thread.claim(client);
             else thread.release(client);
             return;

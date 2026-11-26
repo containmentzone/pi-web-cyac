@@ -214,7 +214,11 @@ export class LiveThread implements UIHost {
   }
 
   async prompt(client: Client, text: string, behavior?: "steer" | "followUp"): Promise<void> {
-    if (this.lease && this.lease.client !== client) throw new Error("Someone else is typing in this thread.");
+    if (this.lease && this.lease.client !== client) {
+      // The sender cleared its composer on submit; hand its text back.
+      client.send({ type: "editor_text", threadId: this.id, text });
+      throw new Error("Someone else is typing in this thread.");
+    }
     this.release(client);
     this.lastActivity = Date.now();
     this.editorText = "";
